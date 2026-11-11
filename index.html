@@ -218,6 +218,26 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
 .dashboard-actions .excel-export:disabled{opacity:.75;cursor:wait}
 #excel-export-status:not(:empty){flex-basis:100%;text-align:end;color:#52627c;font-size:.8rem}
 @media screen and (max-width:620px){.dashboard-actions{justify-content:flex-start}}
+
+
+.project-preview{position:relative;min-width:0}
+#project-pdf[hidden],#project-cover[hidden]{display:none}
+#project-cover{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff}
+.project-preview:has(iframe:not([hidden])) #project-cover:not([hidden]){position:absolute;inset:0;max-height:100%;z-index:1;pointer-events:none}
+
+@media screen{
+ .stress-controls{display:grid;grid-template-columns:minmax(225px,.85fr) minmax(160px,1fr);align-items:center;gap:12px 23px}
+ .stress-controls label{display:flex;justify-content:space-between;gap:10px;align-items:center;font-weight:600}
+ .stress-controls output{min-width:68px;text-align:center;background:#e8eeff;color:#263f79;border-radius:5px;padding:2px 7px;white-space:nowrap;direction:ltr}
+ .stress-controls input{width:100%;accent-color:#3258bc}
+ .stress-buttons{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+ .stress-buttons button{font:inherit;color:#233f88;background:#e8eeff;border:1px solid #cbd7fb;border-radius:6px;padding:5px 10px;cursor:pointer}
+ .stress-result .kpi{padding:10px 12px}
+}
+@media screen and (max-width:760px){
+ .stress-controls{grid-template-columns:1fr;gap:6px}
+ .stress-controls input{margin-bottom:8px}
+}
 </style>
 </head>
 <body>
@@ -229,6 +249,7 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
 <a href="#revenue"><span aria-hidden="true">↗</span>الإيرادات والتخارج</a>
 <a href="#cashflow"><span aria-hidden="true">⇄</span>التدفقات النقدية</a>
 <a href="#partners"><span aria-hidden="true">◫</span>الشراكة والعوائد</a>
+<a href="#sensitivity"><span aria-hidden="true">∿</span>تحليل الحساسية</a>
 <a href="#assumptions"><span aria-hidden="true">⚙</span>الافتراضات</a>
 
 </nav>
@@ -253,13 +274,25 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
 <div class="panel"><div class="controls"><label for="scenario">السيناريو المعروض<select id="scenario"><option value="res">سكني تجاري</option><option value="hotel">فندقي تجاري</option></select></label><a href="#assumptions">تعديل التوقيت ومعدل الخصم</a></div><div id="cash-kpis" class="grid three compact"></div><div class="table-wrap" id="cash-table"></div><h3 class="compact">تمويل المستثمرين وتدفقات الشركاء</h3><div class="table-wrap" id="funding-table"></div></div>
 <p class="note">تُدرج الأرض مساهمةً عينية في السنة صفر. يتوزع الاستثمار النقدي بالتساوي على سنوات التطوير. تُدرج المبيعات والدخل التشغيلي المضمّن في الدراسة وقيمة التخارج في نهاية السنة التالية لاكتمال التطوير. جدول المشروع يعرض التدفقات قبل التمويل. جدول الشركاء يوضح توقيت ضخ المستثمرين وأثره على عائدهم دون تغيير توقيت صرف التطوير.</p></section>
 <section id="partners"><p class="label">الشراكة</p><h2>مساهمات المالك والمستثمرين وعوائدهما</h2><div class="panel table-wrap" id="partner-table"></div><div class="panel table-wrap compact" id="funding-comparison"></div><p class="note">تحسب حصة كل طرف من قيمة مساهمته إلى إجمالي رأس المال. تُوزع متحصلات التخارج وفق هذه النسب، بما فيها استرداد قيمة المساهمات عند كفاية المتحصلات. يحسب العائد الداخلي لكل طرف من تدفقاته الفعلية داخل النموذج.</p></section>
+<section id="sensitivity"><p class="label">اختبار الافتراضات</p><h2>تحليل الحساسية</h2>
+<p class="lead">اختبر تغيّر أسعار البيع والدخل التشغيلي وتكلفة التطوير وتأخير التخارج على السيناريوهين. التغييرات هنا مؤقتة وتُقارن بالافتراضات المطبّقة.</p>
+<div class="panel stress-controls">
+<label for="stress-income"><span>تغيّر البيع والدخل التشغيلي</span><output id="stress-income-value" for="stress-income"></output></label><input id="stress-income" type="range" min="-40" max="40" value="0" step="1">
+<label for="stress-cost"><span>تغيّر تكلفة التطوير النقدية</span><output id="stress-cost-value" for="stress-cost"></output></label><input id="stress-cost" type="range" min="-30" max="40" value="0" step="1">
+<label for="stress-delay"><span>تأخير التخارج</span><output id="stress-delay-value" for="stress-delay"></output></label><input id="stress-delay" type="range" min="0" max="5" value="0" step="1">
+<div class="stress-buttons"><button id="stress-example" type="button">تجربة انخفاض المتحصلات وارتفاع التكلفة</button><button id="stress-reset" type="button">تصفير الاختبار</button></div>
+</div>
+<div id="stress-summary" class="grid two compact" aria-live="polite"></div>
+<div id="stress-table" class="panel table-wrap"></div>
+<p class="caption">يُطبّق تغير الدخل على دخل التشغيل وقيمة تخارج الأصول المدرة للدخل بالمعدل نفسه. يفترض الاختبار ثبات تكلفة الأرض ومعدل الرسملة، وأن تأخير التخارج يؤجل التحصيل فقط.</p>
+</section>
 <section id="assumptions"><p class="label">مدخلات النموذج</p><h2>الافتراضات</h2><p class="lead">عدّل المدخلات ثم اضغط «احتساب وتطبيق» لتحديث لوحة القيادة والجداول وسلايدات الـPDF.</p>
 <div class="panel funding-control"><label for="funding"><strong>طريقة ضخ مساهمة المستثمرين</strong></label><select id="funding"><option value="upfront">ضخ كامل التكاليف غير الأرضية بداية المشروع</option><option value="as-needed">الضخ حسب العجز النقدي في كل فترة</option></select><p class="caption">في الضخ المبكر، يبقى المبلغ غير المصروف رصيدًا نقديًا مخصصًا للتطوير دون عائد على الرصيد. في الضخ حسب الحاجة، تُغطى فجوة كل سنة فقط.</p></div><div class="controls compact"><button type="button" class="primary" id="apply"><span aria-hidden="true">∑</span> احتساب وتطبيق</button><button type="button" id="reset"><span aria-hidden="true">↺</span> استعادة الافتراضات المعتمدة</button><span id="form-status" aria-live="polite"></span></div>
 <div id="assumption-fields" class="grid two"></div>
 </section>
 <section id="project"><p class="label">مستند المشروع</p><h2>تعريف المشروع</h2>
 <div class="pdf-actions"><a id="download-project" download="Ajyad_Project_Study.pdf" hidden>تنزيل PDF</a><a id="open-project" target="_blank" rel="noopener" hidden>فتح في نافذة جديدة</a><span id="pdf-status" aria-live="polite"></span></div>
-<iframe id="project-pdf" title="دراسة تطوير أرض أجياد بصيغة PDF"></iframe>
+<div class="project-preview"><img id="project-cover" src="./assets/project-cover.webp" loading="lazy" width="960" height="540" alt="غلاف دراسة تطوير أرض أجياد" hidden><iframe id="project-pdf" title="دراسة تطوير أرض أجياد بصيغة PDF" hidden></iframe></div>
 </section>
 </main>
 <footer><div class="wrap signature"><div><strong>المدير المالي: مالك أبوريان</strong><small>المملكة العربية السعودية. الرياض</small></div></div></footer></div>
@@ -501,6 +534,7 @@ el("apply").addEventListener("click",()=>{
  modelRevision++;
  el("form-status").textContent="تم احتساب الافتراضات وتحديث الدراسة.";
  render();
+ document.dispatchEvent(new Event("ajyad-assumptions-applied"));
 });
 el("reset").addEventListener("click",()=>{
  inputs={...defaults};
@@ -510,6 +544,7 @@ el("reset").addEventListener("click",()=>{
  modelRevision++;
  el("form-status").textContent="استُعيدت الافتراضات المعتمدة.";
  render();
+ document.dispatchEvent(new Event("ajyad-assumptions-applied"));
 });
 function showPage() {
  const pages=Array.from(document.querySelectorAll("main > section"));
@@ -549,6 +584,14 @@ function preparePrint(){
   page("الإيرادات والتخارج",extract("revenue-table")),
   page("الشراكة والعوائد",extract("partner-table")+'<h3>أثر توقيت ضخ المستثمرين</h3>'+extract("funding-comparison"))
  ];
+ const stressSettings=[
+  ["تغيّر البيع والدخل التشغيلي","stress-income-value"],
+  ["تغيّر تكلفة التطوير النقدية","stress-cost-value"],
+  ["تأخير التخارج","stress-delay-value"]
+ ];
+ const stressContext='<div class="report-metrics report-cash-metrics">'+stressSettings.map(([label,id])=>metric(label,el(id).textContent)).join("")+'</div>';
+ report.push(page("تحليل الحساسية",stressContext+extract("stress-table")+
+  '<p class="report-context">مقارنة بالافتراضات المطبّقة. يفترض الاختبار ثبات قيمة الأرض ومعدل الرسملة، وأن تأخير التخارج يؤجل التحصيل فقط.</p>'));
  const cashSection=(s,rows)=>'<div class="report-metrics report-cash-metrics">'+metric("العائد الداخلي للمشروع",pct(s.irr))+metric("العائد الداخلي للمالك",pct(s.ownerIrr))+metric("العائد الداخلي للمستثمرين",pct(s.investorIrr))+'</div>'+
   table("السنة",["الأرض العينية","صرف التطوير","دخل التشغيل","مبيعات وتخارج","صافي المشروع","ضخ المستثمرين","صافي المالك","صافي المستثمرين"],rows);
  const cashRows=scenarios.map(printableCashRows);
@@ -665,16 +708,40 @@ function loadProjectAssets(){
  });
  return projectAssets;
 }
+function showProjectDocument(url,revision){
+ const frame=el("project-pdf");
+ const previous=currentPdfUrl;
+ currentPdfUrl=url;
+ frame.onload=()=>{
+  if(revision!==modelRevision||currentPdfUrl!==url) return;
+  el("project-cover").hidden=true;
+  el("pdf-status").textContent="";
+ };
+ frame.src=url;
+ frame.hidden=false;
+ for(const id of ["download-project","open-project"]){
+  const link=el(id);
+  link.href=url;
+  link.hidden=false;
+ }
+ if(previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
+ pdfRevision=revision;
+}
 async function updateProjectPdf(){
  const revision=modelRevision;
  if(pdfRevision===revision||pendingRevision===revision) return;
+ el("project-cover").hidden=false;
+ if(fundingMode==="upfront" && Object.keys(defaults).every(key=>inputs[key]===defaults[key])){
+  el("pdf-status").textContent="جارٍ عرض ملف الدراسة…";
+  showProjectDocument("./assets/project-standard.pdf",revision);
+  return;
+ }
  pendingRevision=revision;
  const selectedInputs={...inputs};
  const selectedMode=fundingMode;
- const links=[el("download-project"),el("open-project")];
- links.forEach(link=>link.hidden=true);
+ for(const id of ["download-project","open-project"]) el(id).hidden=true;
  el("project-pdf").hidden=true;
- el("pdf-status").textContent="جارٍ تحديث سلايدات الدراسة المالية…";
+ el("pdf-status").textContent="جارٍ إعداد الملف حسب الافتراضات المطبّقة…";
  try{
   const [template]=await Promise.all([loadProjectAssets(),document.fonts.load("23px Plex")]);
   const bytes=await makeProjectPdf(template,selectedInputs,selectedMode,(width,height)=>{
@@ -684,15 +751,7 @@ async function updateProjectPdf(){
    return canvas;
   });
   if(revision!==modelRevision) return;
-  const url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
-  const previous=currentPdfUrl;
-  currentPdfUrl=url;
-  el("project-pdf").src=url;
-  el("project-pdf").hidden=false;
-  links.forEach(link=>{link.href=url;link.hidden=false;});
-  if(previous) URL.revokeObjectURL(previous);
-  pdfRevision=revision;
-  el("pdf-status").textContent="";
+  showProjectDocument(URL.createObjectURL(new Blob([bytes],{type:"application/pdf"})),revision);
  }catch(error){
   if(revision===modelRevision) el("pdf-status").textContent="تعذر تجهيز ملف PDF. أعد فتح صفحة تعريف المشروع للمحاولة مجددًا.";
  }finally{
@@ -774,6 +833,47 @@ async function exportStudyExcel(){
  }finally{button.disabled=false;}
 }
 el("export-excel").addEventListener("click",exportStudyExcel);
+
+function evaluateStress(base, incomeChange, costChange, delay, discount){
+ const flows=base.flows.map(flow=>flow.asset+flow.spending*(1+costChange));
+ for(let i=0;i<delay;i++) flows.push(0);
+ const proceeds=base.proceeds*(1+incomeChange);
+ flows[flows.length-1]+=proceeds;
+ const cost=base.land+base.cash*(1+costChange);
+ return {proceeds,cost,profit:proceeds-cost,irr:irr(flows),npv:valueAt(flows,discount),flows};
+}
+function renderSensitivity(){
+ const income=Number(el("stress-income").value)||0;
+ const cost=Number(el("stress-cost").value)||0;
+ const delay=Number(el("stress-delay").value)||0;
+ const signed=x=>(x>0?"+":"")+x;
+ el("stress-income-value").textContent=signed(income)+"%";
+ el("stress-cost-value").textContent=signed(cost)+"%";
+ el("stress-delay-value").textContent=delay+" سنة";
+ const original=[model(inputs,"res"),model(inputs,"hotel")];
+ const stressed=original.map(s=>evaluateStress(s,income/100,cost/100,delay,inputs.discount/100));
+ el("stress-summary").innerHTML=stressed.map((s,i)=>{
+  const delta=s.profit-original[i].profit;
+  const change=(delta>0?"+":"")+whole.format(delta);
+  return '<article class="panel stress-result"><h3>'+names[i]+'</h3><div class="grid two">'+kpi("صافي الربح بعد الاختبار",money(s.profit),"ريال")+kpi("التغيّر في صافي الربح",n(change),"مقارنة بالافتراضات المطبّقة")+'</div></article>';
+ }).join("");
+ el("stress-table").innerHTML=table("المؤشر",["سكني · مطبّق","سكني · اختبار","فندقي · مطبّق","فندقي · اختبار"],
+  [["التكلفة الاستثمارية","cost",money],["إجمالي المتحصلات","proceeds",money],["صافي الربح","profit",money],["العائد الداخلي للمشروع","irr",pct],["صافي القيمة الحالية","npv",money]].map(([label,key,format])=>
+   row(label,[original[0],stressed[0],original[1],stressed[1]].map(s=>format(s[key])),key==="profit"?"key":"")));
+}
+function bindSensitivity(){
+ const keys=["income","cost","delay"];
+ for(const key of keys)el("stress-"+key).addEventListener("input",renderSensitivity);
+ function preset(values){
+  keys.forEach((key,index)=>{el("stress-"+key).value=values[index]});
+  renderSensitivity();
+ }
+ el("stress-example").addEventListener("click",()=>preset([-10,10,1]));
+ el("stress-reset").addEventListener("click",()=>preset([0,0,0]));
+ document.addEventListener("ajyad-assumptions-applied",renderSensitivity);
+ renderSensitivity();
+}
+bindSensitivity();
 
 showPage();
 </script></body></html>
