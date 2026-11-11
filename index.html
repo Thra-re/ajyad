@@ -212,15 +212,12 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
  .print-page:last-child .print-sign{position:absolute;bottom:0;left:0;margin:0;padding:0}
 }
 
-.export-actions{display:grid;gap:8px;margin-top:auto}
-.export-actions .excel-export{font:inherit;font-weight:700;color:#f1f5ff;background:#3357ae;border:1px solid #7a97e9;border-radius:8px;padding:8px 10px;cursor:pointer}
-.export-actions .excel-export:hover{background:#4269c5}
-.export-actions .excel-export:disabled{opacity:.75;cursor:wait}
-#excel-export-status:not(:empty){color:#e5edff;font-size:.78rem}
-@media screen and (max-width:620px){
- .export-actions{display:flex;flex-wrap:wrap;align-items:center;margin-top:0}
- .export-actions .excel-export{padding:4px 9px;font-size:.83rem}
-}
+.dashboard-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.dashboard-actions .excel-export{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:.9rem;font-weight:700;color:#fff;background:#3258bc;border:1px solid #3258bc;border-radius:8px;padding:6px 12px;cursor:pointer}
+.dashboard-actions .excel-export:hover{background:#274aa5}
+.dashboard-actions .excel-export:disabled{opacity:.75;cursor:wait}
+#excel-export-status:not(:empty){flex-basis:100%;text-align:end;color:#52627c;font-size:.8rem}
+@media screen and (max-width:620px){.dashboard-actions{justify-content:flex-start}}
 </style>
 </head>
 <body>
@@ -235,11 +232,11 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
 <a href="#assumptions"><span aria-hidden="true">⚙</span>الافتراضات</a>
 
 </nav>
-<div class="export-actions"><button class="print" type="button" id="print">طباعة الدراسة</button><button class="excel-export" type="button" id="export-excel">تصدير الدراسة إلى Excel</button><small id="excel-export-status" aria-live="polite"></small></div><a class="project-link" href="#project"><span aria-hidden="true">▤</span> تعريف المشروع · PDF</a>
+<button class="print" type="button" id="print">طباعة الدراسة</button><a class="project-link" href="#project"><span aria-hidden="true">▤</span> تعريف المشروع · PDF</a>
 </aside>
 <div class="workspace">
 <main class="wrap">
-<section id="overview"><div class="dashboard-hero"><p>دراسة مالية · مكة المكرمة</p><h1>تطوير أرض أجياد</h1><span>السيناريو السكني التجاري والسيناريو الفندقي التجاري</span></div><div class="dashboard-head"><h2>لوحة القيادة</h2><a id="funding-badge" href="#assumptions"></a></div><div id="status" class="note" aria-live="polite" hidden></div>
+<section id="overview"><div class="dashboard-hero"><p>دراسة مالية · مكة المكرمة</p><h1>تطوير أرض أجياد</h1><span>السيناريو السكني التجاري والسيناريو الفندقي التجاري</span></div><div class="dashboard-head"><h2>لوحة القيادة</h2><div class="dashboard-actions"><a id="funding-badge" href="#assumptions"></a><button class="excel-export" type="button" id="export-excel"><span aria-hidden="true">↓</span> تصدير الدراسة إلى Excel</button><small id="excel-export-status" aria-live="polite"></small></div></div><div id="status" class="note" aria-live="polite" hidden></div>
 <div id="land-kpis" class="grid three compact"></div><div id="scenario-cards" class="grid two compact"></div>
 <div class="grid dashboard-charts compact">
 <div class="panel"><h3>التكلفة والمتحصلات</h3><div id="overview-bars" class="chart"></div></div>
