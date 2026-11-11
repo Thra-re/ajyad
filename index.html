@@ -211,6 +211,16 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
  .print-page:last-child{min-height:182mm;padding-bottom:16mm}
  .print-page:last-child .print-sign{position:absolute;bottom:0;left:0;margin:0;padding:0}
 }
+
+.export-actions{display:grid;gap:8px;margin-top:auto}
+.export-actions .excel-export{font:inherit;font-weight:700;color:#f1f5ff;background:#3357ae;border:1px solid #7a97e9;border-radius:8px;padding:8px 10px;cursor:pointer}
+.export-actions .excel-export:hover{background:#4269c5}
+.export-actions .excel-export:disabled{opacity:.75;cursor:wait}
+#excel-export-status:not(:empty){color:#e5edff;font-size:.78rem}
+@media screen and (max-width:620px){
+ .export-actions{display:flex;flex-wrap:wrap;align-items:center;margin-top:0}
+ .export-actions .excel-export{padding:4px 9px;font-size:.83rem}
+}
 </style>
 </head>
 <body>
@@ -225,7 +235,7 @@ footer{background:#142c24;border-top:2px solid #a77b44}.signature{justify-conten
 <a href="#assumptions"><span aria-hidden="true">⚙</span>الافتراضات</a>
 
 </nav>
-<button class="print" type="button" id="print">طباعة الدراسة</button><a class="project-link" href="#project"><span aria-hidden="true">▤</span> تعريف المشروع · PDF</a>
+<div class="export-actions"><button class="print" type="button" id="print">طباعة الدراسة</button><button class="excel-export" type="button" id="export-excel">تصدير الدراسة إلى Excel</button><small id="excel-export-status" aria-live="polite"></small></div><a class="project-link" href="#project"><span aria-hidden="true">▤</span> تعريف المشروع · PDF</a>
 </aside>
 <div class="workspace">
 <main class="wrap">
@@ -692,6 +702,81 @@ async function updateProjectPdf(){
   if(pendingRevision===revision) pendingRevision=-1;
  }
 }
+
+const excelInputCells={"land":"B6","landRate":"B7","serviceFloors":"B8","basements":"B9","podiums":"B10","years":"B11","discount":"B12","basementRate":"B14","podiumRate":"B15","commercialBuild":"B16","landscape":"B17","design":"B18","development":"B19","marketing":"B20","resServices":"B22","resCommercial":"B23","resBuild":"B24","resSale":"B25","hotelServices":"B27","hotelCommercial":"B28","hotelBuild":"B29","hotelDaily":"B30","hotelUnit":"B31","hotelOcc":"B32","hotelNet":"B33","rent":"B35","occupancy":"B36","cap":"B37","fundingMode":"B38"};
+let excelZipLoader;
+function loadExcelZip(){
+ if(window.JSZip) return Promise.resolve(window.JSZip);
+ if(excelZipLoader) return excelZipLoader;
+ excelZipLoader=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");
+  script.src="./assets/jszip.min.js";
+  script.onload=()=>window.JSZip?resolve(window.JSZip):reject(new Error("ZIP library missing"));
+  script.onerror=()=>{script.remove();reject(new Error("ZIP library unavailable"));};
+  document.head.append(script);
+ }).catch(error=>{excelZipLoader=undefined;throw error;});
+ return excelZipLoader;
+}
+async function buildExcelExport(Zip,template,applied,mode,outputType="blob"){
+ const zip=await Zip.loadAsync(template);
+ const assumptionPath="xl/worksheets/sheet2.xml";
+ let assumptions=await zip.file(assumptionPath).async("string");
+ let changed=false;
+ const values={...applied,fundingMode:mode==="upfront"?1:2};
+ for(const [key,cell] of Object.entries(excelInputCells)){
+  const value=values[key];
+  if(!Number.isFinite(value)) throw new Error("Invalid export input "+key);
+  const pattern=new RegExp('(<x:c\\b[^>]*\\br="'+cell+'"[^>]*>\\s*<x:v>)([^<]*)(</x:v>)');
+  if(!pattern.test(assumptions)) throw new Error("Missing Excel input "+cell);
+  assumptions=assumptions.replace(pattern,(whole,open,previous,close)=>{
+   changed ||= Number(previous)!==value;
+   return open+String(value)+close;
+  });
+ }
+ zip.file(assumptionPath,assumptions);
+ const workbookPath="xl/workbook.xml";
+ let workbook=await zip.file(workbookPath).async("string");
+ const calc='<x:calcPr calcId="191029" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>';
+ workbook=workbook.replace(/<x:calcPr\b[^>]*(?:\/>|>[\s\S]*?<\/x:calcPr>)/g,"").replace("</x:workbook>",calc+"</x:workbook>");
+ zip.file(workbookPath,workbook);
+ for(const path of Object.keys(zip.files).filter(path=>/^xl\/worksheets\/sheet\d+\.xml$/.test(path))){
+  let xml=await zip.file(path).async("string");
+  if(!/rightToLeft=/.test(xml)) xml=xml.replace(/<x:sheetView\b/g,'<x:sheetView rightToLeft="1"');
+  if(changed){
+   // Remove old formula results so viewers never show values from a different set of inputs.
+   xml=xml.replace(/<x:c\b[^>]*>[\s\S]*?<\/x:c>/g,cell=>/<x:f(?:\s|>)/.test(cell)?cell.replace(/<x:v(?:\s[^>]*)?(?:\/>|>[\s\S]*?<\/x:v>)/g,""):cell);
+  }
+  zip.file(path,xml);
+ }
+ return zip.generateAsync({type:outputType,compression:"DEFLATE",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+async function exportStudyExcel(){
+ const button=el("export-excel");
+ const state=el("excel-export-status");
+ const snapshot={...inputs};
+ const selectedFunding=fundingMode;
+ button.disabled=true;
+ state.textContent="جارٍ تجهيز المصنف…";
+ try{
+  const [Zip,template]=await Promise.all([loadExcelZip(),fetch("./assets/study-template.xlsx").then(response=>{
+   if(!response.ok) throw new Error("Excel template unavailable");
+   return response.arrayBuffer();
+  })]);
+  const file=await buildExcelExport(Zip,template,snapshot,selectedFunding);
+  const url=URL.createObjectURL(file);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download="Ajyad_Financial_Study.xlsx";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  state.textContent="تم تجهيز ملف Excel.";
+ }catch(error){
+  state.textContent="تعذر تصدير Excel. تحقق من رفع ملفات مجلد assets كاملة.";
+ }finally{button.disabled=false;}
+}
+el("export-excel").addEventListener("click",exportStudyExcel);
 
 showPage();
 </script></body></html>
